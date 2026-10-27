@@ -112,10 +112,11 @@ err_effective = np.sqrt(wavelength_uncertainties**2 + err_wavelength_from_voltag
 # refiting the curve, now using the propagated uncertainty for sigma
 popt_refit, pcov_refit = curve_fit(model, voltage_avgs, wavelength_values, sigma=err_effective, absolute_sigma=True)
 slope_opt_refit, intercept_opt_refit = popt_refit
+slope_uncertainty_refit = np.sqrt(pcov_refit[0, 0])
 
 # calculating plank's constant using the fitted data
 h = slope_opt_refit *(1e-9) * e / c                        # accounting for units by converting from (nm) to (m)
-h_uncertainty = slope_uncertainty * (1e-9) * e / c   # this is the actual unertainty of our plank's constant, bc we needed the factors
+h_uncertainty = slope_uncertainty_refit * (1e-9) * e / c   # this is the actual unertainty of our plank's constant, bc we needed the factors
 
 # calculating the reduced chi squared
 chiSquared = 0
