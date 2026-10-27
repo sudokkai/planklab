@@ -125,12 +125,12 @@ m = 2
 v = N - m
 #calculating chi^2
 for i in range(N):
-    chiSquared += ( (wavelength_values[i] - model(voltage_avgs[i], slope_opt_refit, intercept_opt_refit)) / wavelength_uncertainties[i] )**2
+    chiSquared += ( (wavelength_values[i] - model(voltage_avgs[i], slope_opt_refit, intercept_opt_refit)) / err_effective[i] )**2
 reduced_chiSquared = chiSquared / v
 print("Reduced Chi Squared is: ", reduced_chiSquared)
 
 # calculating residuals = real values - predicted values
-predicted_value = model(voltage_avgs, * popt)
+predicted_value = model(voltage_avgs, * popt_refit)
 residuals = wavelength_values - predicted_value
 
 print("Calcualted plank's constant: ", h, "+- ", h_uncertainty, "\nReal plank's constant: ", true_h)
