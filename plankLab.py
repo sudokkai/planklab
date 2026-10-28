@@ -158,7 +158,7 @@ plt.errorbar(voltage_avgs, wavelength_values, xerr=err_per_avg, yerr=wavelength_
 plt.xlabel("Voltage (V))")
 plt.ylabel("Wavelength (nm)")
 plt.title("Plotting Wavelength (nm) of LEDs vs the turn on Voltage (V)")
-plt.figtext(0.01, 0.01, "Experimental Planck's Constant: "+str(h), fontsize=12, style="italic", color="gray",)
+plt.figtext(0.03, 0.03, "Experimental Planck's Constant: "+str(h), fontsize=12, style="italic", color="gray",)
 plt.legend()
 
 # plot of the residuals 
