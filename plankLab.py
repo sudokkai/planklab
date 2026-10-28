@@ -117,6 +117,7 @@ slope_uncertainty_refit = np.sqrt(pcov_refit[0, 0])
 h = slope_opt_refit * (1e-9) * e / c                        # accounting for units by converting from (nm) to (m)
 h_uncertainty = slope_uncertainty_refit * (1e-9) * e / c   # this is the actual unertainty of our plank's constant, bc we needed the factors
 
+
 # calculating the reduced chi squared using the refitted 
 chiSquared = 0
 N = len(voltage_avgs)
@@ -169,5 +170,7 @@ plt.errorbar(voltage_avgs, residuals, yerr=wavelength_uncertainties,fmt='none', 
 plt.axhline(0, color='black', linestyle='--', linewidth=1)   # zero-reference line
 plt.title("Plot of the Residuals", fontsize=14) 
 plt.figtext(0.01, 0.01, "Reduced Chi Squared: "+str(reduced_chiSquared), fontsize=12, style="italic", color="gray",)
+plt.xlabel("Voltage (V)")
+plt.ylabel("Residuals (nm)")
 plt.legend()
 plt.show()
