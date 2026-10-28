@@ -9,7 +9,6 @@ data = np.loadtxt('plankLab.csv', delimiter=',', comments="#", unpack=True, skip
 voltage_data = data[0]
 wavelength_nm = data[1]
 err_data = data[2]
-
 data = np.array(data)
 
 # defiining constants
@@ -115,15 +114,14 @@ slope_opt_refit, intercept_opt_refit = popt_refit
 slope_uncertainty_refit = np.sqrt(pcov_refit[0, 0])
 
 # calculating plank's constant using the fitted data
-h = slope_opt_refit *(1e-9) * e / c                        # accounting for units by converting from (nm) to (m)
+h = slope_opt_refit * (1e-9) * e / c                        # accounting for units by converting from (nm) to (m)
 h_uncertainty = slope_uncertainty_refit * (1e-9) * e / c   # this is the actual unertainty of our plank's constant, bc we needed the factors
 
-# calculating the reduced chi squared
+# calculating the reduced chi squared using the refitted 
 chiSquared = 0
 N = len(voltage_avgs)
-m = 2
+m = 2 
 v = N - m
-#calculating chi^2
 for i in range(N):
     chiSquared += ( (wavelength_values[i] - model(voltage_avgs[i], slope_opt_refit, intercept_opt_refit)) / err_effective[i] )**2
 reduced_chiSquared = chiSquared / v
@@ -142,9 +140,9 @@ print("Max h = ", h + h_uncertainty, "\nMin h = ", h - h_uncertainty)
 fitted_voltage_avgs = np.linspace(voltage_avgs[0], voltage_avgs[-1], 100)
 
 # for plotting the theoretical h value alongside our calculated one
-A_theoretical = true_h * c / e * 1e9  # units: V nm
+k_theoretical = true_h * c / e * 1e9  # units: V nm
 # note that this uses the same intercept at the fitted function so that the comparison between slopes can be isolated
-theoretical_wavelengths = A_theoretical / (fitted_voltage_avgs - intercept_opt_refit)
+theoretical_wavelengths = k_theoretical / (fitted_voltage_avgs - intercept_opt_refit)
 
 # making variables for the upper and lower wavelengths determined by our uncertainty 
 upper_wavelengths = (slope_opt_refit + slope_uncertainty) / (fitted_voltage_avgs - intercept_opt_refit)
@@ -174,7 +172,7 @@ plt.legend()
 plt.figure(2)
 plt.scatter(voltage_avgs, residuals, color='blue', label='Voltages (V)')
 plt.errorbar(voltage_avgs, residuals, yerr=wavelength_uncertainties,fmt='none', color='blue', 
-             label='Residuals')
+                label='Residuals')
 plt.axhline(0, color='black', linestyle='--', linewidth=1)   # zero-reference line
 plt.title("Plot of the Residuals", fontsize=14) 
 plt.figtext(0.01, 0.01, "Reduced Chi Squared: "+str(reduced_chiSquared), fontsize=12, style="italic", color="gray",)
