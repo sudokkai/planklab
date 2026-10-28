@@ -144,19 +144,11 @@ k_theoretical = true_h * c / e * 1e9  # units: V nm
 # note that this uses the same intercept at the fitted function so that the comparison between slopes can be isolated
 theoretical_wavelengths = k_theoretical / (fitted_voltage_avgs - intercept_opt_refit)
 
-# making variables for the upper and lower wavelengths determined by our uncertainty 
-upper_wavelengths = (slope_opt_refit + slope_uncertainty) / (fitted_voltage_avgs - intercept_opt_refit)
-lower_wavelengths = (slope_opt_refit - slope_uncertainty) / (fitted_voltage_avgs - intercept_opt_refit)
-# note that these only represent the changes in slope, not the full fit, since the intercept has not been dynamically set
 
 # plotting the curve of voltage (V) vs wavelength (nm)
 plt.figure(1)
 plt.plot(fitted_voltage_avgs, model(fitted_voltage_avgs, slope_opt_refit, intercept_opt_refit), color='pink', 
                 label='Voltage (V) vs Wavelength (nm) where λ = hc / e (V - V0)')
-plt.plot(fitted_voltage_avgs, upper_wavelengths, linestyle=":", color="blue",
-                label='Slope-only upper uncertainty curve (+1 sigma)')
-plt.plot(fitted_voltage_avgs, lower_wavelengths, linestyle=':', color='blue',
-                label='Slope-only lower uncertainty curve (-1 sigma)')
 plt.plot(fitted_voltage_avgs, theoretical_wavelengths, color='gray', linestyle='--',
                 label="Theoretical curve (using accepted h)")
 plt.scatter(voltage_avgs, wavelength_values, 
