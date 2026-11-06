@@ -20,6 +20,7 @@ fps = 2.0                           # frames per second (2 images/sec)
 dt = 1.0 / fps                      # time per frame (0.5 s)
 num_frames = 120                    # 120 frames total
 num_trials = 10                     # 10 particles/CSVs
+time_intervals = np.arange(0, 60, 0.5, dtype=None)  # interval of time for each frame
 
 # known constants
 b_err = 0.1                         # idk this one
@@ -32,37 +33,37 @@ eta = 0.001                         # viscosity of water in Pa.s (1 cP at 20°C)
 gamma = 6 * np.pi * eta * radius    # stokes drag coefficient
 
 
-
-r_sq_trials = 0
+# Function to square the relative postion (with the initial position being the first data point) squared of each data point
 def r_squared(x, y):
+    r_sq_trials = []
     x_sq = 0
     y_sq = 0
     r_sq = 0
     for i in range(len(x)):
         # Convert pixels to meters
-        x_m = x[i] * scale
-        y_m = y[i] * scale
+        x_m = x * scale
+        y_m = y * scale
         # Compute squared displacement relative to initial position: (x(t) - x0)^2 + (y(t) - y0)^2
-        r_sq = (x_m - x_m[0])**2 + (y_m - y_m[0])**2
+        r_sq = (x_m[i] - x_m[0])**2 + (y_m[i] - y_m[0])**2
         r_sq_trials.append(r_sq)
     return r_sq_trials
 
+# Calling the function to find all squared positions
 r_trial1_sq = r_squared(x1,y1)
-print(r_trial1_sq)
+r_trial2_sq = r_squared(x2,y2)
+r_trial3_sq = r_squared(x3,y3)
+r_trial4_sq = r_squared(x4,y4)
+r_trial5_sq = r_squared(x5,y5)
+r_trial6_sq = r_squared(x6,y6)
+r_trial7_sq = r_squared(x7,y7)
+r_trial8_sq = r_squared(x8,y8)
+r_trial9_sq = r_squared(x9,y9)
+r_trial10_sq = r_squared(x10,y10)
 
-list = {}
-def step_dist(x):
-    current = 0
-    for i in range (len(x)):
-        current = x[i+1] - x[i]
-        list.append(current)
-    return(current)
-
-def averages(x):
-    total = 0
-    for i in x:
-        total += i
-    return total
+# Putting every r^2 into vertical columns in another array
+r = np.array([r_trial1_sq, r_trial2_sq, r_trial3_sq, r_trial4_sq, r_trial5_sq, r_trial6_sq, r_trial7_sq, r_trial8_sq, r_trial9_sq, r_trial10_sq])
+# Averaging each r^2(t) for each individual t
+R_mean = np.mean(r,axis=0)
 
 
 
@@ -81,3 +82,6 @@ def averages(x):
 
 
 
+
+plt.scatter(time_intervals, R_mean)
+plt.show()
