@@ -2,20 +2,38 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 
-x1, y1 = np.loadtxt('thermal_motion/1.csv', delimiter=',', comments="#", unpack=True, skiprows=1)
-x2, y2 = np.loadtxt('thermal_motion/2.csv', delimiter=',', comments="#", unpack=True, skiprows=1)
-x3, y3 = np.loadtxt('thermal_motion/3.csv', delimiter=',', comments="#", unpack=True, skiprows=1)
-x4, y4 = np.loadtxt('thermal_motion/4.csv', delimiter=',', comments="#", unpack=True, skiprows=1)
-x5, y5 = np.loadtxt('thermal_motion/5.csv', delimiter=',', comments="#", unpack=True, skiprows=1)
-x6, y6 = np.loadtxt('thermal_motion/6.csv', delimiter=',', comments="#", unpack=True, skiprows=1)
-x7, y7 = np.loadtxt('thermal_motion/7.csv', delimiter=',', comments="#", unpack=True, skiprows=1)
-x8, y8 = np.loadtxt('thermal_motion/8.csv', delimiter=',', comments="#", unpack=True, skiprows=1)
-x9, y9 = np.loadtxt('thermal_motion/9.csv', delimiter=',', comments="#", unpack=True, skiprows=1)
+x1,  y1  = np.loadtxt('thermal_motion/1.csv', delimiter=',', comments="#", unpack=True, skiprows=1)
+x2,  y2  = np.loadtxt('thermal_motion/2.csv', delimiter=',', comments="#", unpack=True, skiprows=1)
+x3,  y3  = np.loadtxt('thermal_motion/3.csv', delimiter=',', comments="#", unpack=True, skiprows=1)
+x4,  y4  = np.loadtxt('thermal_motion/4.csv', delimiter=',', comments="#", unpack=True, skiprows=1)
+x5,  y5  = np.loadtxt('thermal_motion/5.csv', delimiter=',', comments="#", unpack=True, skiprows=1)
+x6,  y6  = np.loadtxt('thermal_motion/6.csv', delimiter=',', comments="#", unpack=True, skiprows=1)
+x7,  y7  = np.loadtxt('thermal_motion/7.csv', delimiter=',', comments="#", unpack=True, skiprows=1)
+x8,  y8  = np.loadtxt('thermal_motion/8.csv', delimiter=',', comments="#", unpack=True, skiprows=1)
+x9,  y9  = np.loadtxt('thermal_motion/9.csv', delimiter=',', comments="#", unpack=True, skiprows=1)
 x10, y10 = np.loadtxt('thermal_motion/10.csv', delimiter=',', comments="#", unpack=True, skiprows=1)
 
 num_of_image = len(x1[0])
 image_per_sec = 2
 t_interval = 1/image_per_sec  # each image is taken 0.5 seconds apart
+
+
+r_sq_trials = 0
+def r_squared(x, y):
+    x_sq = 0
+    y_sq = 0
+    r_sq = 0
+    for i in range(len(x)):
+        # Convert pixels to meters
+        x_m = x[i] * scale
+        y_m = y[i] * scale
+        # Compute squared displacement relative to initial position: (x(t) - x0)^2 + (y(t) - y0)^2
+        r_sq = (x_m - x_m[0])**2 + (y_m - y_m[0])**2
+        r_sq_trials.append(r_sq)
+    return r_sq_trials
+
+r_trial1_sq = r_squared(x1,y1)
+print(r_trial1_sq)
 
 list = {}
 def step_dist(x):
@@ -30,6 +48,7 @@ def averages(x):
     for i in x:
         total += i
     return total
+
 
 
 # function that accepts a list and returns the standard deviation of the mean
