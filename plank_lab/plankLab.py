@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 
 # importing experimentally collected data from csv 
-data = np.loadtxt('plankLab.csv', delimiter=',', comments="#", unpack=True, skiprows=1)
+data = np.loadtxt('plank_lab/plankLab.csv', delimiter=',', comments="#", unpack=True, skiprows=1)
 
 # taking csv data into named variables
 voltage_data = data[0]
