@@ -13,24 +13,9 @@ x8, y8 = np.loadtxt('thermal_motion/8.csv', delimiter=',', comments="#", unpack=
 x9, y9 = np.loadtxt('thermal_motion/9.csv', delimiter=',', comments="#", unpack=True, skiprows=1)
 x10, y10 = np.loadtxt('thermal_motion/10.csv', delimiter=',', comments="#", unpack=True, skiprows=1)
 
-
-# facts from the experimantal procedure
-scale = 0.1204 * 1e-6               # m/pixel (0.1204 um/px)
-fps = 2.0                           # frames per second (2 images/sec)
-dt = 1.0 / fps                      # time per frame (0.5 s)
-num_frames = 120                    # 120 frames total
-num_trials = 10                     # 10 particles/CSVs
-
-# known constants
-b_err = 0.1                         # idk this one
-visc = 1.00                         # centipoise, at 20oC but decreases 2% with each degree increase in temperature.
-visc_err = 0.05                     # centipoise
-temp = 296.5                        # kelvin
-temp_err = 0.5                      # kelvin
-radius = (1.9e-6) / 2.0             # bead radius r = 0.95 um
-eta = 0.001                         # viscosity of water in Pa.s (1 cP at 20°C)
-gamma = 6 * np.pi * eta * radius    # stokes drag coefficient
-
+num_of_image = len(x1[0])
+image_per_sec = 2
+t_interval = 1/image_per_sec  # each image is taken 0.5 seconds apart
 
 list = {}
 def step_dist(x):
@@ -61,4 +46,25 @@ def averages(x):
 #    return sigma
 
 
+#known constants
+b_diameter = 1.9 #um (micrometers)
+b_err = 0.1
+visc = 1.00 #centipoise, at 20oC but decreases 2% with each degree increase in temperature.
+visc_err = 0.05 #centipoise
+temp = 296.5 #kelvin
+temp_err = 0.5 #kelvin
 
+# creating model for <r^2> = slope_D * 6t
+def model(t, A, V0):
+    return A / (voltage - V0)
+
+# using curve_fit to generate slope and intercept values from our data
+# taking wavelength as the x axis and voltage average values as the y, we take the wavelength uncertanties since they're much higher
+popt, pcov = curve_fit(model, voltage_avgs, wavelength_values, sigma=wavelength_uncertainties, absolute_sigma=True)
+slope_opt, intercept_opt = popt
+
+def step_distance(x, y):
+    return np.sqrt((x[1:] - x[:-1])**2 + (y[1:] - y[:-1])**2)
+
+r_values = []
+for i in range():
