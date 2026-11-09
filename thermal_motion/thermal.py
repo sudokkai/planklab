@@ -19,8 +19,8 @@ scale = 0.1204 * 1e-6               # m/pixel (0.1204 um/px)
 fps = 2.0                           # frames per second (2 images/sec)
 dt = 1.0 / fps                      # time per frame (0.5 s)
 num_frames = 120                    # 120 frames total
-num_trials = 10                     # 10 particles/CSVs
-time_intervals = np.arange(0, 60, 0.5, dtype=None)  # interval of time for each frame
+num_trials = 10                     # 10 particles; 1 csv for each
+time_intervals = np.arange(0, 60, 0.5, dtype=None)                      # interval of time for each frame
 fitted_time = np.linspace(time_intervals[0], time_intervals[-1], 100)   # fitted time for graphing the plot (not necessary ?..)
 
 # Known constants
@@ -34,7 +34,7 @@ diameter = 1.9e-6                   # meters (1.9 um)
 diameter_err = 0.1e-6               # meters (0.1 um uncertainty)
 eta = 0.001                         # viscosity of water in Pa.s (1 cP at 20°C)
 eta_err = 0.00005                   # Pa.s (0.05 cP uncertainty based on 5% in manual)
-gamma = 6 * np.pi * eta * radius    # stokes drag coefficient
+gamma = 6 * np.pi * eta * radius    # Stokes drag coefficient
 
 # Function to square the relative postion (with the initial position being the first data point) squared of each data point
 def r_squared(x, y):
@@ -63,7 +63,7 @@ r_trial10_sq = r_squared(x10,y10)
 
 # Putting every r^2 into vertical columns in another array
 r = np.array([r_trial1_sq, r_trial2_sq, r_trial3_sq, r_trial4_sq, r_trial5_sq, r_trial6_sq, r_trial7_sq, r_trial8_sq, r_trial9_sq, r_trial10_sq])
-# Mean squared displacement across trials
+# Mean squared displacement across trials using previouly defined array
 R_sq_mean = np.mean(r,axis=0)
 
 # Calculating the standard error of the mean for each time step
@@ -71,10 +71,10 @@ R_sq_mean = np.mean(r,axis=0)
 std_dev = np.std(r, axis=0, ddof=1)
 std_dev_mean = std_dev / np.sqrt(num_trials)
 
-# propagating uncertainty from all sources (incomplete)
+# propagating uncertainty (currently just from the SEM)
 total_err = std_dev_mean
 
-# Prevent division by zero at t = 0 by replacing zero errors with a small minimum uncertainty
+# Prevent division by zero at t = 0 by replacing zero errors with a small minimum uncertainty (1e-15)
 actual_err_fixed = np.where(total_err == 0, 1e-15, total_err)
 
 # 4Dt model for r^2
@@ -86,7 +86,7 @@ poptR, pcovR = curve_fit(Rsquared_model, time_intervals, R_sq_mean, sigma=actual
 D_opt = poptR[0]
 D_unc = np.sqrt(pcovR[0][0])
 k = (D_opt * gamma) / temp
-k_unc = (D_unc * gamma) / temp
+k_unc = (D_unc * gamma) / temp              # Uncertainty from just the curve
 
 # Fractional Error Propagation - expand on this more and why it is the way it is (maybe in the report mainly but here too a bit)
 frac_err_D = D_unc / D_opt
@@ -97,7 +97,7 @@ frac_err_T = temp_err / temp
 # Combined fractional uncertainty
 frac_err_k = np.sqrt(frac_err_D**2 + frac_err_d**2 + frac_err_eta**2 + frac_err_T**2)
 
-# Absolute uncertainty in k
+# Total uncertainty in k from all sources
 k_unc_total = k * frac_err_k
 accepted_k = 1.380649e-23
 
@@ -119,8 +119,10 @@ print("Calcualted k value: ", k, "+- ", k_unc, "\nMax: ", k + k_unc, "\nMin: ", 
 
 # Plot of the r^2(t) = 4Dt relation
 plt.figure(figsize=(8, 6))
-plt.errorbar(time_intervals, R_sq_mean * 1e12, yerr=actual_err_fixed * 1e12, fmt='o', color='blue', label='Averaged Data ± SEM')
-plt.plot(fitted_time, Rsquared_model(fitted_time, D_opt) * 1e12, color='pink', label=f'Fit: 4Dt (D={D_opt:.3e})')
+plt.errorbar(time_intervals, R_sq_mean * 1e12, yerr=actual_err_fixed * 1e12, fmt='o', color='blue', 
+                label='Averaged Data ± SEM')
+plt.plot(fitted_time, Rsquared_model(fitted_time, D_opt) * 1e12, color='pink', 
+                label=f'Fit: 4Dt (D={D_opt:.3e})')
 plt.xlabel('Time (s)')
 plt.ylabel(r'Mean Squared Distance $\langle r^2 \rangle$ ($\mu\text{m}^2$)')
 plt.title('Mean-Squared Distance vs. Time')
@@ -130,7 +132,7 @@ plt.legend()
 plt.figure(figsize=(8, 6))
 plt.scatter(time_intervals, residuals * 1e12, color='blue', label='Time (s)')
 plt.errorbar(time_intervals, residuals * 1e12, yerr=actual_err_fixed * 1e12,fmt='none', color='blue', # accounting for conversion from m to um to match other plot
-                label='Residuals')
+                label=r'Residuals ($\mu\text{m}^2$)')
 plt.axhline(0, color='black', linestyle='--', linewidth=1)   # zero-reference line
 plt.title("Plot of the Residuals", fontsize=14) 
 plt.figtext(0.01, 0.01, "Reduced Chi Squared: "+str(reduced_chiSquared), fontsize=12, style="italic", color="gray",)
