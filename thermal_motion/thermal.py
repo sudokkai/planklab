@@ -36,6 +36,8 @@ eta = 0.001                         # viscosity of water in Pa.s (1 cP at 20°C)
 eta_err = 0.00005                   # Pa.s (0.05 cP uncertainty based on 5% in manual)
 gamma = 6 * np.pi * eta * radius    # Stokes drag coefficient
 
+# -- Method 1 -- ( <r^2 (t)> = 4Dt)
+
 # Function to square the relative postion (with the initial position being the first data point) squared of each data point
 def r_squared(x, y):
     r_sq_trials = []
@@ -94,6 +96,8 @@ frac_err_d = diameter_err / diameter
 frac_err_eta = eta_err / eta
 frac_err_T = temp_err / temp
 
+# take distance from the furthest points and divide by 2
+
 # Combined fractional uncertainty
 frac_err_k = np.sqrt(frac_err_D**2 + frac_err_d**2 + frac_err_eta**2 + frac_err_T**2)
 
@@ -117,9 +121,51 @@ residuals = R_sq_mean - predicted_value
 
 print("Calcualted k value: ", k, "+- ", k_unc, "\nMax: ", k + k_unc, "\nMin: ", k - k_unc, "\nAccepted k: ", accepted_k)
 
-# Plot of the r^2(t) = 4Dt relation
+
+# -- Method 2 -- sum ri^2 = NDdt
+
+# dt is step size (not total time)
+# ri is the step distance between one t at some arbitrary time
+# sum ri^2 is the sum of the squares of those for each trial at the same time 
+
+# Defining function to find the squared step distance of each point and sum them
+def find_D(x, y):
+    total = 0
+    x_m = x * scale
+    y_m = y * scale
+    for i in range(len(x) - 1):
+        ri_sq =  (x_m[i] - x_m[i+1])**2 + (y_m[i] - y_m[i+1])**2
+        total += ri_sq
+    return   total / (dt * num_frames)
+
+# Using the function for each particle
+D1 = find_D(x1, y1)
+D2 = find_D(x2, y2)
+D3 = find_D(x3, y3)
+D4 = find_D(x4, y4)
+D5 = find_D(x5, y5)
+D6 = find_D(x6, y6)
+D7 = find_D(x7, y7)
+D8 = find_D(x8, y8)
+D9 = find_D(x9, y9)
+D10 = find_D(x10, y10)
+
+# Calculating the mean
+mean_D = (D1 + D2 + D3 + D4 + D5 + D6 + D7 + D8 + D9 + D10) / num_trials
+all_Ds = np.array([D1, D2, D3, D4, D5, D6, D7, D8, D9, D10])
+unc_mean_D =  (np.std(all_Ds, axis=0, ddof=1))
+
+k_2 = (mean_D * gamma) / temp
+k_unc_2 = (unc_mean_D * gamma) / temp              
+# Displaying results 
+print("Method 2: k = ", k_2, "+- ", k_unc_2)
+
+
+# -- Plotting --
+
+# Plot of Method 1:
 plt.figure(figsize=(8, 6))
-plt.errorbar(time_intervals, R_sq_mean * 1e12, yerr=actual_err_fixed * 1e12, fmt='o', color='blue', 
+plt.errorbar(time_intervals, R_sq_mean * 1e12, yerr=actual_err_fixed * 1e12, fmt='o', color='blue',     # Scaling the R values by 1e12 so that they match graph units (um)
                 label='Averaged Data ± SEM')
 plt.plot(fitted_time, Rsquared_model(fitted_time, D_opt) * 1e12, color='pink', 
                 label=f'Fit: 4Dt (D={D_opt:.3e})')
@@ -131,12 +177,19 @@ plt.legend()
 # Plot of the residuals
 plt.figure(figsize=(8, 6))
 plt.scatter(time_intervals, residuals * 1e12, color='blue', label='Time (s)')
-plt.errorbar(time_intervals, residuals * 1e12, yerr=actual_err_fixed * 1e12,fmt='none', color='blue', # accounting for conversion from m to um to match other plot
+plt.errorbar(time_intervals, residuals * 1e12, yerr=actual_err_fixed * 1e12,fmt='none', color='blue',   # Accounting for conversion from m to um to match other plot
                 label=r'Residuals ($\mu\text{m}^2$)')
 plt.axhline(0, color='black', linestyle='--', linewidth=1)   # zero-reference line
 plt.title("Plot of the Residuals", fontsize=14) 
-plt.figtext(0.01, 0.01, "Reduced Chi Squared: "+str(reduced_chiSquared), fontsize=12, style="italic", color="gray",)
+plt.figtext(0.01, 0.01, "Reduced Chi Squared: "+str(reduced_chiSquared), fontsize=12, style="italic", color="gray",)  
 plt.xlabel("Time (s)")
 plt.ylabel(r'Residuals ($\mu\text{m}^2$)')
 plt.legend()
+
+# Plot of Method 3: 
+
+
+
+
 plt.show()
+
