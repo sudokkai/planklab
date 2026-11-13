@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 
-# Loading data
+# Loading data from csv
 x1,  y1  = np.loadtxt('thermal_motion/1.csv', delimiter=',', comments="#", unpack=True, skiprows=1)
 x2,  y2  = np.loadtxt('thermal_motion/2.csv', delimiter=',', comments="#", unpack=True, skiprows=1)
 x3,  y3  = np.loadtxt('thermal_motion/3.csv', delimiter=',', comments="#", unpack=True, skiprows=1)
@@ -21,18 +21,15 @@ dt = 1.0 / fps                      # time per frame (0.5 s)
 num_frames = 120                    # 120 frames total
 num_trials = 10                     # 10 particles; 1 csv for each
 time_intervals = np.arange(0, 60, 0.5, dtype=None)                      # interval of time for each frame
-fitted_time = np.linspace(time_intervals[0], time_intervals[-1], 100)   # fitted time for graphing the plot (not necessary ?..)
 
 # Known constants
-b_err = 0.1                         # idk this one
-visc = 1.00                         # centipoise, at 20oC but decreases 2% with each degree increase in temperature.
-visc_err = 0.05                     # centipoise
-temp = 296.5                        # kelvin
-temp_err = 0.5                      # kelvin
-radius = (1.9e-6) / 2.0             # bead radius r = 0.95 um
-diameter = 1.9e-6                   # meters (1.9 um)
-diameter_err = 0.1e-6               # meters (0.1 um uncertainty)
-eta = 0.001                         # viscosity of water in Pa.s (1 cP at 20°C)
+temp = 296.5                        # Kelvin
+temp_err = 0.5                      # Kelvin
+radius = (1.9e-6) / 2.0             # Bead radius (0.95 um)
+radius_err = (0.1e-6) / 2           # Meters (0.05 um)
+diameter = 1.9e-6                   # Meters (1.9 um)
+diameter_err = 0.1e-6               # Meters (0.1 um uncertainty)
+eta = 0.001                         # Viscosity of water in Pa.s (1 cP at 20°C)
 eta_err = 0.00005                   # Pa.s (0.05 cP uncertainty based on 5% in manual)
 gamma = 6 * np.pi * eta * radius    # Stokes drag coefficient
 
@@ -73,54 +70,66 @@ R_sq_mean = np.mean(r,axis=0)
 std_dev = np.std(r, axis=0, ddof=1)
 std_dev_mean = std_dev / np.sqrt(num_trials)
 
-# propagating uncertainty (currently just from the SEM)
-total_err = std_dev_mean
-
-# Prevent division by zero at t = 0 by replacing zero errors with a small minimum uncertainty (1e-15)
-actual_err_fixed = np.where(total_err == 0, 1e-15, total_err)
-
 # 4Dt model for r^2
 def Rsquared_model(t, D):
     return 4 * D * t
 
+# Sclicing out the first data point, since it will always be (0,0) with 0 error, causing issues with the curve_fit accuracy
+t_fit = time_intervals[1:]
+r_fit = R_sq_mean[1:]
+err_fit = std_dev_mean[1:]
+
 # fitting the curve for D
-poptR, pcovR = curve_fit(Rsquared_model, time_intervals, R_sq_mean, sigma=actual_err_fixed, absolute_sigma=True)
+poptR, pcovR = curve_fit(Rsquared_model, t_fit, r_fit, sigma=err_fit, absolute_sigma=True)
 D_opt = poptR[0]
 D_unc = np.sqrt(pcovR[0][0])
 k = (D_opt * gamma) / temp
 k_unc = (D_unc * gamma) / temp              # Uncertainty from just the curve
+print("Uncertainty from ONLY SEM: ", k_unc)
 
-# Fractional Error Propagation - expand on this more and why it is the way it is (maybe in the report mainly but here too a bit)
-frac_err_D = D_unc / D_opt
-frac_err_d = diameter_err / diameter
-frac_err_eta = eta_err / eta
-frac_err_T = temp_err / temp
-
-# take distance from the furthest points and divide by 2
-
-# Combined fractional uncertainty
-frac_err_k = np.sqrt(frac_err_D**2 + frac_err_d**2 + frac_err_eta**2 + frac_err_T**2)
-
-# Total uncertainty in k from all sources
-k_unc_total = k * frac_err_k
-accepted_k = 1.380649e-23
-
-# Calculating the reduced chi squared for poptR fit
+# Calculating the reduced chi squared for the poptR fit
 chiSquared = 0
-N = len(time_intervals)
-m = 2 
+N = len(t_fit)
+m = 1
 v = N - m
 for i in range(N):
-    chiSquared += ( (R_sq_mean[i] - Rsquared_model(time_intervals[i], D_opt)) / actual_err_fixed[i] )**2
+    chiSquared += ( (r_fit[i] - Rsquared_model(t_fit[i], D_opt)) / err_fit[i] )**2
 reduced_chiSquared = chiSquared / v
-print("Reduced Chi Squared is: ", reduced_chiSquared)
+
+# Function is k = (6 pi eta radius D) / temp
+# Finding the squared partial derivaties * their squared uncertainties for error propagation
+dk_dD = np.abs(( (6 * np.pi * eta * radius) / temp )**2 * D_unc**2)
+dk_dr = np.abs(( (6 * np.pi * eta * D_opt ) / temp )**2 * radius_err**2)
+dk_deta = np.abs(( (6 * np.pi * radius * D_opt) / temp )**2 * eta_err**2)
+dk_dT = np.abs(-( ( (6 * np.pi * eta * radius * D_opt) / (temp**2) ) )**2 * temp_err**2)
+
+print(dk_dD)
+print(dk_dr)
+print(dk_deta)
+print(dk_dT)
+
+
+unc_from_d = np.sqrt(dk_dD)
+unc_from_r = np.sqrt(dk_dr)
+unc_from_eta = np.sqrt(dk_deta)
+unc_from_T = np.sqrt(dk_dT)
+
+print(unc_from_d)
+print(unc_from_r)
+print(unc_from_eta)
+print(unc_from_T)
+
+# Total uncertainty in k from all sources
+k_unc_total = np.sqrt(dk_dD + dk_dr + dk_deta + dk_dT)
+accepted_k = 1.380649e-23
+
+# Displaying results
+print(" --- Method 1: ---\nCalcualted k value: ", k, "+- ", k_unc_total, "\nMax: ", k + k_unc_total, "\nMin: ", k - k_unc_total, "\nAccepted k: ", accepted_k,
+      "\nReduced Chi Squared is: ", reduced_chiSquared)
 
 # Calculating residuals = real values - predicted values
-predicted_value = Rsquared_model(time_intervals, * poptR)
-residuals = R_sq_mean - predicted_value
-
-print("Calcualted k value: ", k, "+- ", k_unc, "\nMax: ", k + k_unc, "\nMin: ", k - k_unc, "\nAccepted k: ", accepted_k)
-
+predicted_value = Rsquared_model(t_fit, * poptR)
+residuals = r_fit - predicted_value
 
 # -- Method 2 -- sum ri^2 = NDdt
 
@@ -138,7 +147,7 @@ def find_D(x, y):
         total += ri_sq
     return   total / (dt * num_frames)
 
-# Using the function for each particle
+# Calling the function for each particle
 D1 = find_D(x1, y1)
 D2 = find_D(x2, y2)
 D3 = find_D(x3, y3)
@@ -153,19 +162,25 @@ D10 = find_D(x10, y10)
 # Calculating the mean
 mean_D = (D1 + D2 + D3 + D4 + D5 + D6 + D7 + D8 + D9 + D10) / num_trials
 all_Ds = np.array([D1, D2, D3, D4, D5, D6, D7, D8, D9, D10])
-unc_mean_D =  (np.std(all_Ds, axis=0, ddof=1))
 
+# Finding the standard error between all values 
+unc_mean_D =  (np.std(all_Ds, axis=0, ddof=1)) / np.sqrt(num_trials)
+
+# Converting from D to k
 k_2 = (mean_D * gamma) / temp
 k_unc_2 = (unc_mean_D * gamma) / temp              
 # Displaying results 
-print("Method 2: k = ", k_2, "+- ", k_unc_2)
+print(" --- Method 2: ---\nk = ", k_2, "+- ", k_unc_2,
+      "\nMax: ", k_2 + k_unc_2,
+      "\nMin: ", k_2 - k_unc_2)
 
 
 # -- Plotting --
 
 # Plot of Method 1:
+fitted_time = np.linspace(t_fit[0], t_fit[-1], 100)                               # fitted time for graphing the plot (not necessary since its linear?..)
 plt.figure(figsize=(8, 6))
-plt.errorbar(time_intervals, R_sq_mean * 1e12, yerr=actual_err_fixed * 1e12, fmt='o', color='blue',     # Scaling the R values by 1e12 so that they match graph units (um)
+plt.errorbar(t_fit, r_fit * 1e12, yerr=err_fit * 1e12, fmt='o', color='blue',     # Scaling the R values by 1e12 so that they match graph units (um)
                 label='Averaged Data ± SEM')
 plt.plot(fitted_time, Rsquared_model(fitted_time, D_opt) * 1e12, color='pink', 
                 label=f'Fit: 4Dt (D={D_opt:.3e})')
@@ -176,8 +191,8 @@ plt.legend()
 
 # Plot of the residuals
 plt.figure(figsize=(8, 6))
-plt.scatter(time_intervals, residuals * 1e12, color='blue', label='Time (s)')
-plt.errorbar(time_intervals, residuals * 1e12, yerr=actual_err_fixed * 1e12,fmt='none', color='blue',   # Accounting for conversion from m to um to match other plot
+plt.scatter(t_fit, residuals * 1e12, color='blue', label='Time (s)')
+plt.errorbar(t_fit, residuals * 1e12, yerr=err_fit * 1e12,fmt='none', color='blue',   # Accounting for conversion from m to um to match other plot
                 label=r'Residuals ($\mu\text{m}^2$)')
 plt.axhline(0, color='black', linestyle='--', linewidth=1)   # zero-reference line
 plt.title("Plot of the Residuals", fontsize=14) 
