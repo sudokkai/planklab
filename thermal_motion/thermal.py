@@ -103,22 +103,6 @@ dk_dr = np.abs(( (6 * np.pi * eta * D_opt ) / temp )**2 * radius_err**2)
 dk_deta = np.abs(( (6 * np.pi * radius * D_opt) / temp )**2 * eta_err**2)
 dk_dT = np.abs(-( ( (6 * np.pi * eta * radius * D_opt) / (temp**2) ) )**2 * temp_err**2)
 
-print(dk_dD)
-print(dk_dr)
-print(dk_deta)
-print(dk_dT)
-
-
-unc_from_d = np.sqrt(dk_dD)
-unc_from_r = np.sqrt(dk_dr)
-unc_from_eta = np.sqrt(dk_deta)
-unc_from_T = np.sqrt(dk_dT)
-
-print(unc_from_d)
-print(unc_from_r)
-print(unc_from_eta)
-print(unc_from_T)
-
 # Total uncertainty in k from all sources
 k_unc_total = np.sqrt(dk_dD + dk_dr + dk_deta + dk_dT)
 accepted_k = 1.380649e-23
