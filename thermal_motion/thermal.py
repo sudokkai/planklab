@@ -87,6 +87,7 @@ D_unc = np.sqrt(pcovR[0][0])
 k = (D_opt * gamma) / temp
 k_unc = (D_unc * gamma) / temp              # Uncertainty from just the curve
 print("Uncertainty from ONLY SEM: ", k_unc)
+print(D_opt)
 
 # Calculating the reduced chi squared for the poptR fit
 chiSquared = 0
