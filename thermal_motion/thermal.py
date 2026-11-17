@@ -131,7 +131,7 @@ def find_D(x, y):
     for i in range(len(x) - 1):
         ri_sq =  (x_m[i] - x_m[i+1])**2 + (y_m[i] - y_m[i+1])**2
         total += ri_sq
-    return   total / (dt * num_frames)
+    return   total / (4* dt * num_frames)
 
 # Calling the function for each particle
 D1 = find_D(x1, y1)
