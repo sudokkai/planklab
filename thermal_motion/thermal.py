@@ -30,7 +30,7 @@ radius = (1.9e-6) / 2.0             # Bead radius (0.95 um)
 radius_err = (0.1e-6) / 2           # Meters (0.05 um)
 diameter = 1.9e-6                   # Meters (1.9 um)
 diameter_err = 0.1e-6               # Meters (0.1 um uncertainty)
-eta = 0.001                         # Viscosity of water in Pa.s (1 cP at 20°C)
+eta = 0.001                         # Viscosity of water in Pa.s (1 cP at 20Â°C)
 eta_err = 0.00005                   # Pa.s (0.05 cP uncertainty based on 5% in manual)
 gamma = 6 * np.pi * eta * radius    # Stokes drag coefficient
 
@@ -130,7 +130,7 @@ def find_D(x, y):
     for i in range(len(x) - 1):
         ri_sq =  (x_m[i] - x_m[i+1])**2 + (y_m[i] - y_m[i+1])**2
         total += ri_sq
-    return   total / (dt * num_frames)
+    return  total / (4 * dt * (len(x) -1))
 
 # Calling the function for each particle
 D1 = find_D(x1, y1)
@@ -150,10 +150,13 @@ all_Ds = np.array([D1, D2, D3, D4, D5, D6, D7, D8, D9, D10])
 
 # Finding the standard error between all values 
 unc_mean_D =  (np.std(all_Ds, axis=0, ddof=1)) / np.sqrt(num_trials)
+dk_dD_2 = np.abs(( (6 * np.pi * eta * radius) / temp )**2 * unc_mean_D**2)
+D_unc_total_2 = np.sqrt(dk_dD_2 + dk_dr + dk_deta + dk_dT)
+
 
 # Converting from D to k
 k_2 = (mean_D * gamma) / temp
-k_unc_2 = (unc_mean_D * gamma) / temp              
+k_unc_2 = (D_unc_total_2 * gamma) / temp              
 # Displaying results 
 print(" --- Method 2: ---\nk = ", k_2, "+- ", k_unc_2,
       "\nMax: ", k_2 + k_unc_2,
@@ -166,10 +169,10 @@ print(" --- Method 2: ---\nk = ", k_2, "+- ", k_unc_2,
 def step_distance(x, y):
     temp=[]
     for i in range(len(x)-1):
-        temp.append(np.sqrt((x[i] - x[i+1])**2 + (y[i] - y[i+1])**2))
+        temp.append(np.sqrt(((x[i]*scale) - (x[i+1]*scale))**2 + ((y[i]*scale) - (y[i+1]*scale))**2))
     return temp
 
-#need to fix so it works for each csv, or its run for each csv
+# Calling function to find the step distances of all the data sets
 combined_csv = np.vstack(((x1, y1), (x2, y2), (x3, y3), (x4, y4), (x5, y5), (x6, y6), (x7, y7), (x8, y8), (x9, y9), (x10, y10)))
 step1 = step_distance(x1, y1)
 step2 = step_distance(x2, y2)
@@ -181,64 +184,82 @@ step7 = step_distance(x7, y7)
 step8 = step_distance(x8, y8)
 step9 = step_distance(x9, y9)
 step10 = step_distance(x10, y10)
+# Putting the values into an array
 r_values = np.vstack((step1, step2, step3, step4, step5, step6, step7, step8, step9, step10))
-print(r_values)
-#print(combined_csv)
-#r_values=[]
-#for n in range(10):
-    #for i in range(119):
-    #    r_values.append(step_distance(combined_csv[n][i], combined_csv[n][i+1], combined_csv[n+1][i], combined_csv[n+1][i+1]))
-#print(len(r_values))
-
 r_values = np.array(r_values)
+# Finding mean, standard deviation, and standard error
 r_mean = np.mean(r_values)
-#print(r_values)
 err = np.std(r_values)
 mean_err = err / np.sqrt(10)
 
-#model for distribution, step distances
-
+# Model for the Rayleigh distribution,
 def stepmodel(r, D):
-    return ((r)/(2*D*0.5)) * np.exp((-(r**2))/(4*D*0.5))
+    D_scaled = D * 1e12
+    return ((r)/(2*D_scaled*0.5)) * np.exp((-(r**2))/(4*D_scaled*0.5))
 
-#spiderman result
-loc, scale = rayleigh.fit(r_values, floc=0)
-fitted_pdf = rayleigh.pdf(r_values, loc=loc, scale=scale)
+#fixed curvefitting variables for more reasonable D values
+ydata = []
+Dinitial = []
+for i in range(10):
+    # Create histogram for this particle only
+    counts, edges = np.histogram(r_values[i], bins=30)
+    bin_centres = (edges[:-1] + edges[1:]) / 2
 
-t = np.linspace(0, 119, 119)    
-r=np.linspace(0,120,100)
+    # Normalize histogram
+    bin_width = edges[1] - edges[0]
+    N = len(r_values[i])
 
-popt1, pcov1 = curve_fit(stepmodel, t, r_values[0],  sigma=mean_err, absolute_sigma=True) #fix sigma
+    ydata.append(counts / (N * bin_width))
+
+    # Initial estimate
+    Dinitial.append(np.mean(r_values[i]**2) / (4 * dt))
+
+#curvefitting for each data set
+popt1, pcov1 = curve_fit(stepmodel, bin_centres, ydata[0],  sigma=mean_err, absolute_sigma=True, p0=Dinitial[0], bounds=[0, np.inf]) #fix sigma
 D_value1, pcov_val1 = popt1[0], pcov1
-popt2, pcov2 = curve_fit(stepmodel, t, r_values[1],  sigma=mean_err, absolute_sigma=True) #fix sigma
+popt2, pcov2 = curve_fit(stepmodel, bin_centres, ydata[1],  sigma=mean_err, absolute_sigma=True, p0=Dinitial[1], bounds=[0, np.inf]) #fix sigma
 D_value2, pcov_val2 = popt2[0], pcov2
-popt3, pcov3 = curve_fit(stepmodel, t, r_values[2],  sigma=mean_err, absolute_sigma=True) #fix sigma
+popt3, pcov3 = curve_fit(stepmodel, bin_centres, ydata[2] ,  sigma=mean_err, absolute_sigma=True, p0=Dinitial[2], bounds=[0, np.inf]) #fix sigma
 D_value3, pcov_val3 = popt3[0], pcov3
-popt4, pcov4 = curve_fit(stepmodel, t, r_values[3],  sigma=mean_err, absolute_sigma=True) #fix sigma
+popt4, pcov4 = curve_fit(stepmodel, bin_centres, ydata[3],  sigma=mean_err, absolute_sigma=True, p0=Dinitial[3], bounds=[0, np.inf]) #fix sigma
 D_value4, pcov_val4 = popt4[0], pcov4
-popt5, pcov5 = curve_fit(stepmodel, t, r_values[4],  sigma=mean_err, absolute_sigma=True) #fix sigma
+popt5, pcov5 = curve_fit(stepmodel, bin_centres, ydata[4],  sigma=mean_err, absolute_sigma=True, p0=Dinitial[4], bounds=[0, np.inf]) #fix sigma
 D_value5, pcov_val5 = popt5[0], pcov5
-popt6, pcov6 = curve_fit(stepmodel, t, r_values[5],  sigma=mean_err, absolute_sigma=True) #fix sigma
+popt6, pcov6 = curve_fit(stepmodel, bin_centres, ydata[5],  sigma=mean_err, absolute_sigma=True, p0=Dinitial[5], bounds=[0, np.inf]) #fix sigma
 D_value6, pcov_val6 = popt6[0], pcov6
-popt7, pcov7 = curve_fit(stepmodel, t, r_values[6],  sigma=mean_err, absolute_sigma=True) #fix sigma
+popt7, pcov7 = curve_fit(stepmodel, bin_centres, ydata[6],  sigma=mean_err, absolute_sigma=True, p0=Dinitial[6], bounds=[0, np.inf]) #fix sigma
 D_value7, pcov_val7 = popt7[0], pcov7
-popt8, pcov8 = curve_fit(stepmodel, t, r_values[7],  sigma=mean_err, absolute_sigma=True) #fix sigma
+popt8, pcov8 = curve_fit(stepmodel, bin_centres, ydata[7],  sigma=mean_err, absolute_sigma=True, p0=Dinitial[7], bounds=[0, np.inf]) #fix sigma
 D_value8, pcov_val8 = popt8[0], pcov8
-popt9, pcov9 = curve_fit(stepmodel, t, r_values[8],  sigma=mean_err, absolute_sigma=True) #fix sigma
+popt9, pcov9 = curve_fit(stepmodel, bin_centres, ydata[8],  sigma=mean_err, absolute_sigma=True, p0=Dinitial[8], bounds=[0, np.inf]) #fix sigma
 D_value9, pcov_val9 = popt9[0], pcov9
-popt10, pcov10 = curve_fit(stepmodel, t, r_values[9],  sigma=mean_err, absolute_sigma=True) #fix sigma
+popt10, pcov10 = curve_fit(stepmodel, bin_centres, ydata[9],  sigma=mean_err, absolute_sigma=True, p0=Dinitial[9], bounds=[0, np.inf]) #fix sigma
 D_value10, pcov_val10 = popt10[0], pcov10
 
-D_val_average = np.mean([D_value1, D_value2, D_value3, D_value4, D_value5, D_value6, D_value7, D_value8, D_value9, D_value10])
+# averages and r_val_comb 
+D_val_average = (D_value1 + D_value2 + D_value3 + D_value4 + D_value5 + D_value6 + D_value7 + D_value8 + D_value9 + D_value10) / 10
 r_values_comb = np.concatenate((step1, step2, step3, step4, step5, step6, step7, step8, step9, step10))
+
+# k value method 3
+k_3 = (6 * np.pi * eta * radius * D_val_average) / temp
+# Standard error in D for method 3
+D_unc3 = np.std([D_value1, D_value2, D_value3, D_value4, D_value5, D_value6, D_value7, D_value8, D_value9, D_value10], ddof=1)/np.sqrt(10)
+
+# The differential componenet of method 3's uncertainty
+dk_dD_3 = np.abs(( (6 * np.pi * eta * radius) / temp )**2 * D_unc3**2)
+# Total propagation
+k3_unc = np.sqrt(dk_dD_3 + dk_dr + dk_deta + dk_dT)
+
+# print k and unc for method 3
+print(" --- Method 3: ---\nk = ", k_3, "+- ", k3_unc)
 
 # -- Plotting --
 
 # Plot of Method 1:
-fitted_time = np.linspace(t_fit[0], t_fit[-1], 100)                               # fitted time for graphing the plot (not necessary since its linear?..)
+fitted_time = np.linspace(t_fit[0], t_fit[-1], 100)                                  # fitted time for graphing the plot (not necessary since its linear?..)
 plt.figure(figsize=(8, 6))
-plt.errorbar(t_fit, r_fit * 1e12, yerr=err_fit * 1e12, fmt='o', color='blue',     # Scaling the R values by 1e12 so that they match graph units (um)
-                label='Averaged Data ± SEM')
+plt.errorbar(t_fit, r_fit * 1e12, yerr=err_fit * 1e12, fmt='o', color='blue',        # Scaling the R values by 1e12 so that they match graph units (um)
+                label='Averaged Data Â± SEM')
 plt.plot(fitted_time, Rsquared_model(fitted_time, D_opt) * 1e12, color='pink', 
                 label=f'Fit: 4Dt (D={D_opt:.3e})')
 plt.xlabel('Time (s)')
@@ -260,23 +281,11 @@ plt.legend()
 
 # Plot of Method 3:
 plt.figure(figsize=(8, 6))
-plt.hist(r_values_comb, bins=30, density=True, alpha=0.6, color='b', label='Step Distance Histogram')
-plt.plot(r, stepmodel(r, D_val_average), 'r-', label='Fitted Rayleigh Distribution1',color='red')
-#plt.plot(r, stepmodel(r, D_value2), 'r-', label='Fitted Rayleigh Distribution2',color='blue')
-#plt.plot(r, stepmodel(r, D_value3), 'r-', label='Fitted Rayleigh Distribution3',color='green')
-#plt.plot(r, stepmodel(r, D_value4), 'r-', label='Fitted Rayleigh Distribution4',color='orange')
-#plt.plot(r, stepmodel(r, D_value5), 'r-', label='Fitted Rayleigh Distribution5',color='purple')
-#plt.plot(r, stepmodel(r, D_value6), 'r-', label='Fitted Rayleigh Distribution6',color='brown')
-#plt.plot(r, stepmodel(r, D_value7), 'r-', label='Fitted Rayleigh Distribution7',color='pink')
-#plt.plot(r, stepmodel(r, D_value8), 'r-', label='Fitted Rayleigh Distribution8',color='gray')
-#plt.plot(r, stepmodel(r, D_value9), 'r-', label='Fitted Rayleigh Distribution9',color='olive')
-#plt.plot(r, stepmodel(r, D_value10), 'r-', label='Fitted Rayleigh Distribution10',color='cyan')
-#plt.plot(r_values, fitted_pdf, 'r-', label='Fitted Rayleigh Distribution') LOL
-plt.xlabel('Step Distance (fix)')
-plt.ylabel('# of Steps')
-plt.title('Distribution of Step Distances')
+plt.xlim(0, 120*scale)
+plt.hist(r_values_comb, bins=30, density=False, alpha=0.6, color='blue', label='Step Distance Histogram')
+plt.plot(r, stepmodel(r, D_val_average), 'r-', label='Fitted Rayleigh Distribution')
+plt.xlabel('Step Distance ($\mu m$)')
+plt.ylabel('Probability Density')
+plt.title('Distribution of Step Distances ')
 plt.legend()
 plt.show()
-
-print("D values: ", D_value1*scale, D_value2*scale, D_value3*scale, D_value4*scale, D_value5*scale, D_value6*scale, D_value7*scale, D_value8*scale, D_value9*scale, D_value10*scale)
-#print(combined_csv, r_values, D_value)
