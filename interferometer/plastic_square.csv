@@ -1,4 +1,4 @@
-Angle (minutes), Number of fringes disappeared (N), Uncertainty (N)
+Angle (degrees), Angle (minutes), Number of fringes disappeared (N), Uncertainty (N)
 0, 0, 0
 20, 6, 1
 75, 15, 1
@@ -15,4 +15,3 @@ Angle (minutes), Number of fringes disappeared (N), Uncertainty (N)
 97, 50, 10, 1
 96, 30, 5, 1
 95, 10, 10, 1
-95
