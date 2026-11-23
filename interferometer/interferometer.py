@@ -13,7 +13,7 @@ p_sq_thickness_err = 0.01     # Uncertainty from the caliper (** CHECK THIS **)
 
 # Importing data for the green LED
 greenled = np.loadtxt('interferometer/greenled_second_trial.csv', delimiter=',', comments="#", unpack=True, skiprows=1)
-g_dist, greenled_N, greenled_err = greenled
+g_dist, greenled_N, greenled_err = gre9enled
 
 
 # Separating the two trials (The mirror distance was reset at the 13th place in the csv since fringes became too hard to see)
