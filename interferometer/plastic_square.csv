@@ -1,13 +1,12 @@
-Angle (degrees), Angle (minutes), Number of fringes disappeared (N), Uncertainty (N)
-0, 0, 0
-20, 6, 1
-75, 15, 1
-90, 15, 1
-
-
+Angle (degrees), Angle (minutes), Number of fringes disappeared (N), Uncertainty (N) # all zero entries are indicators of a reset of the dial
+0,0,0,0
+20, 6, 0, 0
+75, 15, 1, 1
+90, 15, 1, 1
+0,0,0,0
 95, 0, 0, 0
 94, 15, 5 , 1
-
+0,0,0,0
 100, 0 ,0, 0
 99, 20, 10, 1
 98, 20, 5, 1

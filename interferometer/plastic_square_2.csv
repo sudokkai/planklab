@@ -1,0 +1,12 @@
+Angle (degrees), Angle (minutes), Number of fringes disappeared (N), Uncertainty (N)    # starting point is 320 degrees
+320, 0, 0, 0
+321, 0, 10, 1
+321, 50, 10, 1
+322, 40, 10, 1
+323, 10, 10, 1
+323, 40, 10, 1
+324, 20, 10, 1
+324, 50, 10, 1
+325, 20, 10, 1
+325, 40, 10, 1
+326, 15, 10, 1
