@@ -83,6 +83,7 @@ m_err = np.sqrt( pcov1[0, 0] )
 Lambda_opt = 2/m_opt
 Lambda_err = 2*m_err/m_opt**2  # Not sure if I should use this uncertainty propagation (need to verify)
 
+
 # Calculating residuals = real values - predicted values
 predicted_value1 = wvl_model(delta_x, * popt1)
 residuals = N - predicted_value1
@@ -239,20 +240,6 @@ chi_squared2 = np.sum((residuals2 / N_dis_err)**2)
 degrees_freedom2 = len(N_dis) - len(popt2)
 reduced_chi_squared2 = chi_squared2 / degrees_freedom2
 
-print("\n-- ACTIVITY 1: GREEN LASER WAVELENGTH --")
-
-print(f"Fitted slope: {m_opt:.5f} ± {m_err:.5f} fringes/um")
-print(f"Wavelength: {Lambda_opt*1000:.2f} ± {Lambda_err*1000:.2f} nm")
-print(f"Reduced chi-squared: {reduced_chi_squared:.3f}")
-
-print("\n-- ACTIVITY 2: REFRACTIVE INDEX --")   
-
-print(f"Fitted coefficient (a): {a_opt:.2f} ± {a_err:.2f} rad^-2")
-print(f"Fitted angular offset (theta_0): {np.degrees(theta_0):.3f} ± {np.degrees(theta_0_err):.3f} degrees")
-print(f"Refractive index (n): {n_opt:.4f} ± {n_err:.4f}")
-print(f"Reduced chi-squared: {reduced_chi_squared2:.3f}")
-
-
 # Ploting activity 2 (index of refraction)
 
 # Creating fitted time so that the curve can be plotted all the way through the data points
@@ -300,8 +287,221 @@ plt.grid(alpha=0.3)
 rod_length = 8.9         # cm
 rod_length_err = 0.05    # cm
 
-l0 = 89000
-l000
+l0 = 8.9 * 10000         # Convert cm to um 
+l0_err = 0.05 * 10000    
 
+# Importing data 
+act3 = np.loadtxt('interferometer/temperature.csv', delimiter=',', comments="#", unpack=True, skiprows=1)
+temp, N_temp, N_temp_err = act3
+
+# Initial temperature of the rod
+T0 = temp[0]
+# Relative temperatures
+delta_T = temp - T0
+
+# Linear model
+def temp_model(x, c):
+    return x * c
+
+# Curve fit: exclude initial point because its uncertainty is zero
+popt3, pcov3 = curve_fit(temp_model, delta_T[1:], N_temp[1:], sigma=N_temp_err[1:], absolute_sigma=True)
+# Extract curve fit parameters
+c_opt = popt3[0]
+c_err = np.sqrt(pcov3[0,0])
+
+# Calculating alpha and the associated uncertainty from the curve fit parameters
+alpha = (c_opt * Lambda_opt) / (2*l0)
+alpha_err = (Lambda_opt / (2 * l0)) * c_err
+
+# Calculate residuals
+predicted_N = temp_model(delta_T[1:], c_opt)
+residuals3 = N_temp[1:] - predicted_N
+
+# Reduced chi-squared
+chi_squared3 = np.sum((residuals3 / N_temp_err[1:])**2)
+dof3 = len(residuals3) - len(popt3)
+reduced_chi_squared3 = chi_squared3 / dof3
+
+
+
+print("Slope:", c_opt, "+/-", c_err, "fringes/°C")
+print("Alpha:", alpha, "+/-", alpha_err, "K^-1")
+
+print("Residuals:", residuals3)
+print("Reduced chi-squared:", reduced_chi_squared3)
+
+# Ploting activity 3 (thermal expansion)
+fitted_T = np.linspace(0, max(delta_T), 100)
+plt.figure(figsize=(8, 6))
+plt.errorbar(
+        delta_T,
+        N_temp,
+        yerr=N_temp_err,
+        fmt='o',
+        capsize=3,
+        label='Experimental data' )
+plt.plot(
+        fitted_T,
+        temp_model(fitted_T, c_opt),
+        color='green',
+        label='Linear fit' )
+plt.xlabel(r'Temperature Change, $\Delta T$ ($^\circ$C)')
+plt.ylabel('Cumulative Number of Fringes, N')
+plt.title('Aluminium: Fringe Count vs. Temperature Change')
+plt.legend()
+plt.grid(alpha=0.3)
+# Plot of the residuals
+plt.figure(figsize=(8, 6))
+plt.errorbar(
+        delta_T[1:],
+        residuals3,
+        yerr=N_temp_err[1:],
+        fmt='o',
+        color='blue',
+        capsize=3,
+        label='Residuals ± uncertainty' )
+plt.axhline(0, color='black', linestyle='--', linewidth=1)   # zero-reference line
+plt.title('Aluminium: Residuals of Linear Fit')
+plt.figtext(0.01, 0.01, "Reduced Chi Squared: "+str(reduced_chi_squared3), fontsize=12, style="italic", color="gray",)  
+plt.xlabel(r'Temperature Change, $\Delta T$ ($^\circ$C)')
+plt.ylabel('Residuals in Fringe Count (fringes)')
+plt.legend()
+plt.grid(alpha=0.3)
+
+
+# -- Activity 4 -- (red LED wavelength and spectral bandwidth)
+
+# Importing data
+redled = np.loadtxt('interferometer/redled.csv',delimiter=',',comments="#",unpack=True,skiprows=1)
+red_dist, red_N, red_err = redled
+
+# Displacement between consecutive readings
+delta_x_red = np.abs(np.diff(red_dist))
+
+# Corresponding fringe counts
+N_red = red_N[1:]
+
+# Separating the three trials
+trial1_red = red_dist[0:4]
+trial2_red = red_dist[4:8]
+trial3_red = red_dist[8:12]
+
+# Displacement between consecutive readings
+dx1_red = np.abs(np.diff(trial1_red))
+dx2_red = np.abs(np.diff(trial2_red))
+dx3_red = np.abs(np.diff(trial3_red))
+
+# Appending list of all of the values
+delta_x_red = np.concatenate((dx1_red, dx2_red, dx3_red))
+
+# Corresponding fringe counts
+N1_red = red_N[1:4]
+N2_red = red_N[5:8]
+N3_red = red_N[9:12]
+N_red = np.concatenate((N1_red, N2_red, N3_red))
+
+# And same for the uncertainty (even though all the uncertainty values are the same...)
+N1_red_err = red_err[1:4]
+N2_red_err = red_err[5:8]
+N3_red_err = red_err[9:12]
+
+N_red_err = np.concatenate((N1_red_err, N2_red_err, N3_red_err))
+
+# Same linear model as activity 1
+def red_model(x, m):
+    return m * x
+
+# Curve fit and optimized values
+popt4a, pcov4a = curve_fit(red_model, delta_x_red, N_red, sigma=N_red_err, absolute_sigma=True)
+m_red = popt4a[0]
+m_red_err = np.sqrt(pcov4a[0, 0])
+
+# Known green laser wavelength (nm)
+Lambda_green_known = 532
+
+# Calculate wavelength. Same relationship as before
+Lambda_red = 2 / m_red
+# Calculating a calibrated wavelength by using the 'ideal' wavelength of the green laser
+Lambda_red_calibrated = Lambda_green_known * m_opt / m_red
+
+# Uncertainty
+Lambda_red_err = 2 * m_red_err / m_red**2
+
+# Residuals
+predicted_red = red_model(delta_x_red, m_red)
+residuals_red = N_red - predicted_red
+
+# Reduced chi-squared
+chi_red = np.sum((residuals_red / N_red_err)**2)
+dof_red = len(N_red) - len(popt4a)
+reduced_chi_red = chi_red / dof_red
+
+# Plotting activity 4 
+# Fitted x
+fitted_x3 = np.linspace(0, max(delta_x_red) + 0.5, 100)
+plt.figure(figsize=(8, 5))
+plt.errorbar(
+        delta_x_red, 
+        N_red,
+        yerr=N_red_err,
+        fmt='o',
+        capsize=4,
+        label='Experimental data' )
+# Fitted line
+plt.plot(
+        fitted_x3,
+        red_model(fitted_x3, m_red),
+        label=f'Linear fit: N = ({m_red:.3f})Δx' )
+plt.axhline(0, color='black', linestyle='--', linewidth=1)   # zero-reference line
+plt.title('Red LED: Fringe Count vs. Mirror Displacement')
+plt.figtext(0.01, 0.01, "Reduced Chi Squared: "+str(reduced_chi_red), fontsize=12, style="italic", color="gray",)  
+plt.xlabel('Mirror Displacement, Δx (µm)')
+plt.ylabel('Number of Fringes, N')
+plt.legend()
+plt.grid(alpha=0.3)
+
+# Plotting residuals
+plt.figure(figsize=(8, 5))
+plt.errorbar(
+        delta_x_red, 
+        residuals_red,
+        yerr=N_red_err,
+        fmt='o',
+        capsize=4 )
+plt.axhline(y=0, color='black', linestyle='--')
+plt.xlabel('Mirror Displacement, Δx (µm)')
+plt.ylabel('Residuals (Fringes)')
+plt.title('Red LED: Residuals of Linear Fit')
+plt.legend()
+plt.grid(alpha=0.3)
+
+
+# End results for printing
+
+print("\n-- ACTIVITY 1: GREEN LASER WAVELENGTH --")
+
+print(f"Fitted slope: {m_opt:.5f} ± {m_err:.5f} fringes/um")
+print(f"Wavelength: {Lambda_opt*1000:.2f} ± {Lambda_err*1000:.2f} nm")
+print(f"Reduced chi-squared: {reduced_chi_squared:.3f}")
+
+print("\n-- ACTIVITY 2: REFRACTIVE INDEX --")   
+
+print(f"Fitted coefficient (a): {a_opt:.2f} ± {a_err:.2f} rad^-2")
+print(f"Fitted angular offset (theta_0): {np.degrees(theta_0):.3f} ± {np.degrees(theta_0_err):.3f} degrees")
+print(f"Refractive index (n): {n_opt:.4f} ± {n_err:.4f}")
+print(f"Reduced chi-squared: {reduced_chi_squared2:.3f}")
+
+print("\n-- ACTIVITY 3: THERMAL EXPANSION --")
+
+print(f"Slope: {c_opt:.5f} ± {c_err:.5f} fringes/°C")
+print(f"Thermal expansion coefficient: {alpha:.5e} ± {alpha_err:.5e} K^-1")
+print(f"Reduced chi-squared: {reduced_chi_squared3:.3f}")
+
+print("\n-- ACTIVITY 4A: RED LED WAVELENGTH --")
+print(f"Slope: {m_red:.5f} ± {m_red_err:.5f} fringes/um")
+print(f"Wavelength: {Lambda_red*1000:.2f} ± {Lambda_red_err*1000:.2f} nm")
+print(f"Reduced chi-squared: {reduced_chi_red:.3f}")
+print("Residuals:", residuals_red)
+print("Fringe uncertainties:", N_red_err)
 
 plt.show()
